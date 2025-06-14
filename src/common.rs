@@ -14,16 +14,16 @@ pub struct Ptr32<T>(*const T);
 #[cfg(target_pointer_width = "32")]
 impl<T> Ptr32<T> {
     /// Get the wrapped pointer
-    /// 
+    ///
     /// On 32-bit architectures, this returns the actual pointer (which may be null). On 64-bit
     /// architectures, this always returns null, as the pointer is necessarily not valid in this
     /// address space.
     pub const fn ptr(&self) -> *const T {
         self.0
     }
-    
+
     /// Get the bits of the wrapped pointer as a 32-bit unsigned integer
-    pub const fn as_int(&self) -> u32 {
+    pub fn as_int(&self) -> u32 {
         self.0 as usize as u32
     }
 }
@@ -49,7 +49,7 @@ impl<T> Ptr32<T> {
     }
 
     /// Get the bits of the wrapped pointer as a 32-bit unsigned integer
-    pub const fn as_int(&self) -> u32 {
+    pub fn as_int(&self) -> u32 {
         self.value
     }
 }
