@@ -14,12 +14,12 @@ pub struct HitBounds {
 
 impl HitBounds {
     // most bounds don't have a z offset, so the convenience constructor will omit it for brevity
-    pub const fn new(x: Fixed16, x_size_half: Fixed16, z_size_quarter: Fixed16) -> Self {
+    pub const fn new(x: i16, x_size_half: i16, z_size_quarter: i16) -> Self {
         Self {
-            x,
+            x: Fixed16(x),
             z: Fixed16(0),
-            x_size_half,
-            z_size_quarter,
+            x_size_half: Fixed16(x_size_half),
+            z_size_quarter: Fixed16(z_size_quarter),
         }
     }
 
