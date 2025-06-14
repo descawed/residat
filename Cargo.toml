@@ -1,0 +1,13 @@
+[package]
+name = "residat"
+version = "0.1.0"
+authors = ["descawed <residat@descawed.com>"]
+edition = "2024"
+description = "A Rust crate for working with the files and in-memory data structures of the classic Resident Evil games"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0.98"
+binrw = "0.15.0"
+derive_more = { version = "2.0.1", features = ["full"] }
+num_enum = "0.7.3"
