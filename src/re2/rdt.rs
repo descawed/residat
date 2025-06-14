@@ -94,12 +94,12 @@ impl RdtHeader {
 #[binrw]
 #[derive(Debug)]
 pub struct Collider {
-    x: Fixed16,
-    z: Fixed16,
-    w: UFixed16,
-    h: UFixed16,
-    packed: u32,
-    floor: u32,
+    pub x: Fixed16,
+    pub z: Fixed16,
+    pub w: UFixed16,
+    pub h: UFixed16,
+    pub packed: u32,
+    pub floor: u32,
 }
 
 impl Collider {
@@ -111,13 +111,13 @@ impl Collider {
 #[binrw]
 #[derive(Debug)]
 pub struct Collision {
-    cell_x: Fixed16,
-    cell_z: Fixed16,
+    pub cell_x: Fixed16,
+    pub cell_z: Fixed16,
     count: u32,
-    ceiling: i32,
-    dummy: u32,
+    pub ceiling: i32,
+    pub dummy: u32,
     #[br(count = count - 1)]
-    colliders: Vec<Collider>,
+    pub colliders: Vec<Collider>,
 }
 
 impl Default for Collision {
@@ -136,12 +136,12 @@ impl Default for Collision {
 #[binrw]
 #[derive(Debug)]
 pub struct Floor {
-    x: Fixed16,
-    z: Fixed16,
-    width: UFixed16,
-    height: UFixed16,
-    unknown: u16,
-    level: u16,
+    pub x: Fixed16,
+    pub z: Fixed16,
+    pub width: UFixed16,
+    pub height: UFixed16,
+    pub unknown: u16,
+    pub level: u16,
 }
 
 #[binrw]
