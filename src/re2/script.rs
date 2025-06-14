@@ -2,6 +2,9 @@ use binrw::binrw;
 
 use crate::common::*;
 
+pub const MAX_OPCODE: u8 = 0x8E;
+pub const NUM_INSTRUCTIONS: usize = 0x8F;
+
 #[binrw]
 #[derive(Debug)]
 pub enum Instruction {
