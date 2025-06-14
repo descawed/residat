@@ -149,7 +149,7 @@ pub struct Floor {
 struct FloorData {
     num_floors: u16,
     #[br(count = num_floors)]
-    floors: Vec<Floor>,
+    pub floors: Vec<Floor>,
     unknown: u16,
 }
 
