@@ -12,3 +12,5 @@ pub use script::*;
 
 mod weapon;
 pub use weapon::*;
+
+pub const VSYNCS_PER_SECOND: u64 = 60;
