@@ -592,6 +592,13 @@ impl Instruction {
         matches!(self, Self::EndIf(_) | Self::Next(_) | Self::EdWhile(_) | Self::EWhile(_) | Self::ESwitch(_))
     }
 
+    pub const fn is_check(&self) -> bool {
+        matches!(self,
+            Self::Ck { .. } | Self::Cmp { .. } | Self::DirCk { .. } | Self::SceKeyCk { .. } | Self::SceTrgCk { .. }
+            | Self::KeepItemCk(_) | Self::KeepItemCk2 { .. } | Self::SceEmPosCk { .. } | Self::PoisonCk
+        )
+    }
+
     pub const fn opcode(&self) -> u8 {
         match self {
             Self::Nop => 0x00,
