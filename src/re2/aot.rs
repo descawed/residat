@@ -1,5 +1,14 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+pub const SAT_TRIGGER_BY_PLAYER: u8 = 0x01;
+pub const SAT_TRIGGER_BY_NPC: u8 = 0x02;
+pub const SAT_TRIGGER_BY_OBJECT: u8 = 0x04;
+pub const SAT_TRIGGER_BY_ALLY: u8 = 0x08;
+pub const SAT_TRIGGER_ON_ACTION: u8 = 0x10;
+pub const SAT_TRIGGER_FRONT: u8 = 0x20;
+pub const SAT_TRIGGER_CENTER: u8 = 0x40;
+pub const SAT_4P: u8 = 0x80;
+
 /// ID of an item in the game
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u16)]
