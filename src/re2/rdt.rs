@@ -238,7 +238,7 @@ impl RawRdt {
         let buf = match header.size(section) {
             Some(size) => {
                 let size = size as usize;
-                let mut buf = Vec::with_capacity(size);
+                let mut buf = vec![0u8; size];
                 f.read_exact(&mut buf)?;
                 buf
             }
