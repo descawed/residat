@@ -1,13 +1,71 @@
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use anyhow::{Context, Result};
-use binrw::{binrw, BinReaderExt};
+use binrw::{binrw, BinReaderExt, BinWriterExt};
+use enum_map::{Enum, EnumMap, enum_map};
 
 use crate::common::*;
 use super::script::Instruction;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
+pub enum RdtSection {
+    SoundAttributes,
+    SoundHeader1,
+    SoundBank1,
+    SoundHeader2,
+    SoundBank2,
+    Ota,
+    Collision,
+    CameraPos,
+    CameraZone,
+    Light,
+    Model,
+    Floor,
+    Block,
+    JpMessage,
+    OtherMessage,
+    CameraScroll,
+    InitScript,
+    ExecScript,
+    SpriteId,
+    SpriteData,
+    SpriteTexture,
+    ModelTexture,
+    Animation,
+}
+
+impl RdtSection {
+    pub const fn next(&self) -> Option<Self> {
+        Some(match self {
+            Self::SoundAttributes => Self::SoundHeader1,
+            Self::SoundHeader1 => Self::SoundBank1,
+            Self::SoundBank1 => Self::SoundHeader2,
+            Self::SoundHeader2 => Self::SoundBank2,
+            Self::SoundBank2 => Self::Ota,
+            Self::Ota => Self::Collision,
+            Self::Collision => Self::CameraPos,
+            Self::CameraPos => Self::CameraZone,
+            Self::CameraZone => Self::Light,
+            Self::Light => Self::Model,
+            Self::Model => Self::Floor,
+            Self::Floor => Self::Block,
+            Self::Block => Self::JpMessage,
+            Self::JpMessage => Self::OtherMessage,
+            Self::OtherMessage => Self::CameraScroll,
+            Self::CameraScroll => Self::InitScript,
+            Self::InitScript => Self::ExecScript,
+            Self::ExecScript => Self::SpriteId,
+            Self::SpriteId => Self::SpriteData,
+            Self::SpriteData => Self::SpriteTexture,
+            Self::SpriteTexture => Self::ModelTexture,
+            Self::ModelTexture => Self::Animation,
+            Self::Animation => return None,
+        })
+    }
+}
+
 #[binrw]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct RdtHeader {
     n_sprite: u8,
     n_cut: u8,
@@ -44,50 +102,194 @@ struct RdtHeader {
 }
 
 impl RdtHeader {
-    fn init_script_size(&self) -> usize {
-        if self.init_script_offset == 0 {
-            return 0;
+    const fn offset(&self, section: RdtSection) -> u32 {
+        match section {
+            RdtSection::SoundAttributes => self.sound_attr_offset,
+            RdtSection::SoundHeader1 => self.sound_header1_offset,
+            RdtSection::SoundBank1 => self.sound_bank1_offset,
+            RdtSection::SoundHeader2 => self.sound_header2_offset,
+            RdtSection::SoundBank2 => self.sound_bank2_offset,
+            RdtSection::Ota => self.ota_offset,
+            RdtSection::Collision => self.collision_offset,
+            RdtSection::CameraPos => self.camera_pos_offset,
+            RdtSection::CameraZone => self.camera_zone_offset,
+            RdtSection::Light => self.light_offset,
+            RdtSection::Model => self.model_offset,
+            RdtSection::Floor => self.floor_offset,
+            RdtSection::Block => self.block_offset,
+            RdtSection::JpMessage => self.jp_message_offset,
+            RdtSection::OtherMessage => self.other_message_offset,
+            RdtSection::CameraScroll => self.camera_scroll_offset,
+            RdtSection::InitScript => self.init_script_offset,
+            RdtSection::ExecScript => self.exec_script_offset,
+            RdtSection::SpriteId => self.sprite_id_offset,
+            RdtSection::SpriteData => self.sprite_data_offset,
+            RdtSection::SpriteTexture => self.sprite_texture_offset,
+            RdtSection::ModelTexture => self.model_texture_offset,
+            RdtSection::Animation => self.animation_offset,
+        }
+    }
+
+    const fn set_offset(&mut self, section: RdtSection, offset: u32) {
+        match section {
+            RdtSection::SoundAttributes => self.sound_attr_offset = offset,
+            RdtSection::SoundHeader1 => self.sound_header1_offset = offset,
+            RdtSection::SoundBank1 => self.sound_bank1_offset = offset,
+            RdtSection::SoundHeader2 => self.sound_header2_offset = offset,
+            RdtSection::SoundBank2 => self.sound_bank2_offset = offset,
+            RdtSection::Ota => self.ota_offset = offset,
+            RdtSection::Collision => self.collision_offset = offset,
+            RdtSection::CameraPos => self.camera_pos_offset = offset,
+            RdtSection::CameraZone => self.camera_zone_offset = offset,
+            RdtSection::Light => self.light_offset = offset,
+            RdtSection::Model => self.model_offset = offset,
+            RdtSection::Floor => self.floor_offset = offset,
+            RdtSection::Block => self.block_offset = offset,
+            RdtSection::JpMessage => self.jp_message_offset = offset,
+            RdtSection::OtherMessage => self.other_message_offset = offset,
+            RdtSection::CameraScroll => self.camera_scroll_offset = offset,
+            RdtSection::InitScript => self.init_script_offset = offset,
+            RdtSection::ExecScript => self.exec_script_offset = offset,
+            RdtSection::SpriteId => self.sprite_id_offset = offset,
+            RdtSection::SpriteData => self.sprite_data_offset = offset,
+            RdtSection::SpriteTexture => self.sprite_texture_offset = offset,
+            RdtSection::ModelTexture => self.model_texture_offset = offset,
+            RdtSection::Animation => self.animation_offset = offset,
+        }
+    }
+
+    const fn size(&self, section: RdtSection) -> Option<u32> {
+        let offset = self.offset(section);
+        if offset == 0 {
+            return Some(0);
         }
 
-        let next_offset = if self.exec_script_offset > 0 {
-            self.exec_script_offset
-        } else if self.sprite_id_offset > 0 {
-            self.sprite_id_offset
-        } else if self.sprite_data_offset > 0 {
-            self.sprite_data_offset
-        } else if self.sprite_texture_offset > 0 {
-            self.sprite_texture_offset
-        } else if self.model_texture_offset > 0 {
-            self.model_texture_offset
-        } else if self.animation_offset > 0 {
-            self.animation_offset
-        } else {
-            return 0;
-        };
+        let mut next_section = section.next();
+        while let Some(section) = next_section {
+            let next_offset = self.offset(section);
+            if next_offset > 0 {
+                return Some(next_offset - offset);
+            }
+            next_section = section.next();
+        }
 
-        (next_offset - self.init_script_offset) as usize
+        None
+    }
+
+    fn init_script_size(&self) -> usize {
+        self.size(RdtSection::InitScript).unwrap_or(0) as usize
     }
 
     fn exec_script_size(&self) -> usize {
-        if self.exec_script_offset == 0 {
-            return 0;
-        }
+        self.size(RdtSection::ExecScript).unwrap_or(0) as usize
+    }
+}
 
-        let next_offset = if self.sprite_id_offset > 0 {
-            self.sprite_id_offset
-        } else if self.sprite_data_offset > 0 {
-            self.sprite_data_offset
-        } else if self.sprite_texture_offset > 0 {
-            self.sprite_texture_offset
-        } else if self.model_texture_offset > 0 {
-            self.model_texture_offset
-        } else if self.animation_offset > 0 {
-            self.animation_offset
-        } else {
-            return 0;
+#[derive(Debug, Clone)]
+pub struct RawRdt {
+    header: RdtHeader,
+    sections: EnumMap<RdtSection, Vec<u8>>,
+}
+
+macro_rules! read_section {
+    ($f:ident, $section:ident, $header:ident) => {
+        RawRdt::read_next_section(&mut $f, $section, &$header)?
+    }
+}
+
+impl RawRdt {
+    fn update_header(&mut self) {
+        let mut offset = size_of::<RdtHeader>();
+        for (section, data) in &self.sections {
+            if data.is_empty() {
+                self.header.set_offset(section, 0);
+            } else {
+                self.header.set_offset(section, offset as u32);
+                offset += data.len();
+            }
+        }
+    }
+
+    pub fn section(&self, section: RdtSection) -> &[u8] {
+        &self.sections[section]
+    }
+
+    pub fn replace_section(&mut self, section: RdtSection, data: Vec<u8>) {
+        self.sections[section] = data;
+        self.update_header();
+    }
+
+    pub fn size(&self) -> usize {
+        size_of::<RdtHeader>() + self.sections.values().map(Vec::len).sum::<usize>()
+    }
+
+    fn read_next_section<T: Read + Seek>(mut f: T, section: RdtSection, header: &RdtHeader) -> Result<Vec<u8>> {
+        let offset = header.offset(section) as u64;
+        f.seek(SeekFrom::Start(offset))?;
+        let buf = match header.size(section) {
+            Some(size) => {
+                let size = size as usize;
+                let mut buf = Vec::with_capacity(size);
+                f.read_exact(&mut buf)?;
+                buf
+            }
+            None => {
+                let mut buf = Vec::new();
+                f.read_to_end(&mut buf)?;
+                buf
+            }
         };
 
-        (next_offset - self.exec_script_offset) as usize
+        Ok(buf)
+    }
+
+    pub fn read<T: Read + Seek>(mut f: T) -> Result<Self> {
+        use RdtSection::*;
+
+        let header: RdtHeader = f.read_le()?;
+        let sections = enum_map! {
+            SoundAttributes => read_section!(f, SoundAttributes, header),
+            SoundHeader1 => read_section!(f, SoundHeader1, header),
+            SoundBank1 => read_section!(f, SoundBank1, header),
+            SoundHeader2 => read_section!(f, SoundHeader2, header),
+            SoundBank2 => read_section!(f, SoundBank2, header),
+            Ota => read_section!(f, Ota, header),
+            Collision => read_section!(f, Collision, header),
+            CameraPos => read_section!(f, CameraPos, header),
+            CameraZone => read_section!(f, CameraZone, header),
+            Light => read_section!(f, Light, header),
+            Model => read_section!(f, Model, header),
+            Floor => read_section!(f, Floor, header),
+            Block => read_section!(f, Block, header),
+            JpMessage => read_section!(f, JpMessage, header),
+            OtherMessage => read_section!(f, OtherMessage, header),
+            CameraScroll => read_section!(f, CameraScroll, header),
+            InitScript => read_section!(f, InitScript, header),
+            ExecScript => read_section!(f, ExecScript, header),
+            SpriteId => read_section!(f, SpriteId, header),
+            SpriteData => read_section!(f, SpriteData, header),
+            SpriteTexture => read_section!(f, SpriteTexture, header),
+            ModelTexture => read_section!(f, ModelTexture, header),
+            Animation => read_section!(f, Animation, header),
+        };
+
+        let mut rdt = Self {
+            header,
+            sections,
+        };
+        // go ahead and rewrite the header to eliminate any gaps between the sections so we don't
+        // have issues if we immediately write it back out
+        rdt.update_header();
+        Ok(rdt)
+    }
+
+    pub fn write<T: Write + Seek>(&self, mut f: T) -> Result<()> {
+        f.write_le(&self.header)?;
+        for data in self.sections.values() {
+            f.write(data)?;
+        }
+
+        Ok(())
     }
 }
 
