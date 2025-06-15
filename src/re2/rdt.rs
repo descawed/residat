@@ -171,6 +171,7 @@ impl RdtHeader {
         let mut size = u32::MAX;
         let mut next_section = Some(RdtSection::first());
         while let Some(section) = next_section {
+            next_section = section.next();
             if section == in_section {
                 continue;
             }
@@ -179,7 +180,6 @@ impl RdtHeader {
             if next_offset > offset {
                 size = size.min(next_offset - offset);
             }
-            next_section = section.next();
         }
 
         (size != u32::MAX).then_some(size)
