@@ -35,6 +35,10 @@ pub enum RdtSection {
 }
 
 impl RdtSection {
+    pub const fn first() -> Self {
+        Self::SoundAttributes
+    }
+
     pub const fn next(&self) -> Option<Self> {
         Some(match self {
             Self::SoundAttributes => Self::SoundHeader1,
@@ -158,22 +162,27 @@ impl RdtHeader {
         }
     }
 
-    const fn size(&self, section: RdtSection) -> Option<u32> {
-        let offset = self.offset(section);
+    fn size(&self, in_section: RdtSection) -> Option<u32> {
+        let offset = self.offset(in_section);
         if offset == 0 {
             return Some(0);
         }
 
-        let mut next_section = section.next();
+        let mut size = u32::MAX;
+        let mut next_section = Some(RdtSection::first());
         while let Some(section) = next_section {
+            if section == in_section {
+                continue;
+            }
+
             let next_offset = self.offset(section);
-            if next_offset > 0 {
-                return Some(next_offset - offset);
+            if next_offset > offset {
+                size = size.min(next_offset - offset);
             }
             next_section = section.next();
         }
 
-        None
+        (size != u32::MAX).then_some(size)
     }
 
     fn init_script_size(&self) -> usize {
