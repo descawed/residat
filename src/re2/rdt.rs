@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use binrw::{binrw, BinReaderExt, BinWriterExt};
 use enum_map::{Enum, EnumMap, enum_map};
 
@@ -35,9 +35,34 @@ pub enum RdtSection {
 }
 
 impl RdtSection {
-    pub const fn first() -> Self {
-        Self::SoundAttributes
-    }
+    pub const NUM_SECTIONS: usize = 23;
+
+    pub const ALL: [Self; 23] =
+        [
+            Self::SoundAttributes,
+            Self::SoundHeader1,
+            Self::SoundBank1,
+            Self::SoundHeader2,
+            Self::SoundBank2,
+            Self::Ota,
+            Self::Collision,
+            Self::CameraPos,
+            Self::CameraZone,
+            Self::Light,
+            Self::Model,
+            Self::Floor,
+            Self::Block,
+            Self::JpMessage,
+            Self::OtherMessage,
+            Self::CameraScroll,
+            Self::InitScript,
+            Self::ExecScript,
+            Self::SpriteId,
+            Self::SpriteData,
+            Self::SpriteTexture,
+            Self::ModelTexture,
+            Self::Animation,
+        ];
 
     pub const fn next(&self) -> Option<Self> {
         Some(match self {
@@ -169,9 +194,7 @@ impl RdtHeader {
         }
 
         let mut size = u32::MAX;
-        let mut next_section = Some(RdtSection::first());
-        while let Some(section) = next_section {
-            next_section = section.next();
+        for &section in &RdtSection::ALL {
             if section == in_section {
                 continue;
             }
@@ -198,6 +221,7 @@ impl RdtHeader {
 pub struct RawRdt {
     header: RdtHeader,
     sections: EnumMap<RdtSection, Vec<u8>>,
+    section_order: Vec<RdtSection>,
 }
 
 macro_rules! read_section {
@@ -207,25 +231,48 @@ macro_rules! read_section {
 }
 
 impl RawRdt {
-    fn update_header(&mut self) {
-        let mut offset = size_of::<RdtHeader>();
-        for (section, data) in &self.sections {
-            if data.is_empty() {
-                self.header.set_offset(section, 0);
-            } else {
-                self.header.set_offset(section, offset as u32);
-                offset += data.len();
-            }
-        }
-    }
-
     pub fn section(&self, section: RdtSection) -> &[u8] {
         &self.sections[section]
     }
 
+    fn shift(&mut self, offset: u32, delta: i32) {
+        if delta == 0 {
+            return;
+        }
+
+        for &section in &RdtSection::ALL {
+            let section_offset = self.header.offset(section);
+            if section_offset <= offset {
+                continue;
+            }
+
+            let new_offset = section_offset.checked_add_signed(delta).unwrap_or(0);
+            self.header.set_offset(section, new_offset);
+        }
+    }
+
     pub fn replace_section(&mut self, section: RdtSection, data: Vec<u8>) {
+        if data.is_empty() {
+            let original_offset = self.header.offset(section);
+            let original_size = self.sections[section].len();
+            self.header.set_offset(section, 0);
+            self.section_order.retain(|s| *s != section);
+            // need to shift things forward
+            self.shift(original_offset, -(original_size as i32));
+        } else if !self.section_order.contains(&section) {
+            // add it at the end
+            self.section_order.push(section);
+            // size will still give us the current size for now because we haven't added the data to
+            // the map yet
+            self.header.set_offset(section, self.size() as u32);
+        } else {
+            // need to shift everything that comes after this section
+            let offset = self.header.offset(section);
+            let original_size = self.sections[section].len();
+            self.shift(offset, data.len() as i32 - original_size as i32);
+        }
+
         self.sections[section] = data;
-        self.update_header();
     }
 
     pub fn size(&self) -> usize {
@@ -282,19 +329,37 @@ impl RawRdt {
             Animation => read_section!(f, Animation, header),
         };
 
-        let mut rdt = Self {
+        let mut section_offsets = Vec::with_capacity(RdtSection::NUM_SECTIONS);
+        for &section in &RdtSection::ALL {
+            let offset = header.offset(section);
+            if offset == 0 {
+                continue;
+            }
+
+            section_offsets.push((section, offset));
+        }
+
+        section_offsets.sort_by_key(|(_, offset)| *offset);
+
+        let section_order = section_offsets.into_iter().map(|(section, _)| section).collect();
+
+        Ok(Self {
             header,
             sections,
-        };
-        // go ahead and rewrite the header to eliminate any gaps between the sections so we don't
-        // have issues if we immediately write it back out
-        rdt.update_header();
-        Ok(rdt)
+            section_order,
+        })
     }
 
     pub fn write<T: Write + Seek>(&self, mut f: T) -> Result<()> {
         f.write_le(&self.header)?;
-        for data in self.sections.values() {
+        for &section in &self.section_order {
+            let current_position = f.stream_position()? as u32;
+            let expected_offset = self.header.offset(section);
+            if current_position != expected_offset {
+                bail!("expected section {:?} at offset {} but got {}", section, expected_offset, current_position);
+            }
+
+            let data = self.section(section);
             f.write(data)?;
         }
 
