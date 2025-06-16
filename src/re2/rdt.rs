@@ -224,12 +224,6 @@ pub struct RawRdt {
     section_order: Vec<RdtSection>,
 }
 
-macro_rules! read_section {
-    ($f:ident, $section:ident, $header:ident) => {
-        RawRdt::read_next_section(&mut $f, $section, &$header)?
-    }
-}
-
 impl RawRdt {
     pub fn section(&self, section: RdtSection) -> &[u8] {
         &self.sections[section]
@@ -279,55 +273,10 @@ impl RawRdt {
         size_of::<RdtHeader>() + self.sections.values().map(Vec::len).sum::<usize>()
     }
 
-    fn read_next_section<T: Read + Seek>(mut f: T, section: RdtSection, header: &RdtHeader) -> Result<Vec<u8>> {
-        let offset = header.offset(section) as u64;
-        f.seek(SeekFrom::Start(offset))?;
-        let buf = match header.size(section) {
-            Some(size) => {
-                let size = size as usize;
-                let mut buf = vec![0u8; size];
-                f.read_exact(&mut buf)?;
-                buf
-            }
-            None => {
-                let mut buf = Vec::new();
-                f.read_to_end(&mut buf)?;
-                buf
-            }
-        };
-
-        Ok(buf)
-    }
-
     pub fn read<T: Read + Seek>(mut f: T) -> Result<Self> {
         use RdtSection::*;
 
         let header: RdtHeader = f.read_le()?;
-        let sections = enum_map! {
-            SoundAttributes => read_section!(f, SoundAttributes, header),
-            SoundHeader1 => read_section!(f, SoundHeader1, header),
-            SoundBank1 => read_section!(f, SoundBank1, header),
-            SoundHeader2 => read_section!(f, SoundHeader2, header),
-            SoundBank2 => read_section!(f, SoundBank2, header),
-            Ota => read_section!(f, Ota, header),
-            Collision => read_section!(f, Collision, header),
-            CameraPos => read_section!(f, CameraPos, header),
-            CameraZone => read_section!(f, CameraZone, header),
-            Light => read_section!(f, Light, header),
-            Model => read_section!(f, Model, header),
-            Floor => read_section!(f, Floor, header),
-            Block => read_section!(f, Block, header),
-            JpMessage => read_section!(f, JpMessage, header),
-            OtherMessage => read_section!(f, OtherMessage, header),
-            CameraScroll => read_section!(f, CameraScroll, header),
-            InitScript => read_section!(f, InitScript, header),
-            ExecScript => read_section!(f, ExecScript, header),
-            SpriteId => read_section!(f, SpriteId, header),
-            SpriteData => read_section!(f, SpriteData, header),
-            SpriteTexture => read_section!(f, SpriteTexture, header),
-            ModelTexture => read_section!(f, ModelTexture, header),
-            Animation => read_section!(f, Animation, header),
-        };
 
         let mut section_offsets = Vec::with_capacity(RdtSection::NUM_SECTIONS);
         for &section in &RdtSection::ALL {
@@ -341,7 +290,60 @@ impl RawRdt {
 
         section_offsets.sort_by_key(|(_, offset)| *offset);
 
-        let section_order = section_offsets.into_iter().map(|(section, _)| section).collect();
+        let section_order = section_offsets.into_iter().map(|(section, _)| section).collect::<Vec<_>>();
+
+        let mut sections = enum_map! {
+            SoundAttributes => Vec::new(),
+            SoundHeader1 => Vec::new(),
+            SoundBank1 => Vec::new(),
+            SoundHeader2 => Vec::new(),
+            SoundBank2 => Vec::new(),
+            Ota => Vec::new(),
+            Collision => Vec::new(),
+            CameraPos => Vec::new(),
+            CameraZone => Vec::new(),
+            Light => Vec::new(),
+            Model => Vec::new(),
+            Floor => Vec::new(),
+            Block => Vec::new(),
+            JpMessage => Vec::new(),
+            OtherMessage => Vec::new(),
+            CameraScroll => Vec::new(),
+            InitScript => Vec::new(),
+            ExecScript => Vec::new(),
+            SpriteId => Vec::new(),
+            SpriteData => Vec::new(),
+            SpriteTexture => Vec::new(),
+            ModelTexture => Vec::new(),
+            Animation => Vec::new(),
+        };
+
+        for pair in section_order.windows(2) {
+            let this_section = pair[0];
+            let this_offset = header.offset(this_section);
+
+            let next_section = pair[1];
+            let next_offset = header.offset(next_section);
+
+            let size = (next_offset - this_offset) as usize;
+            let mut buf = vec![0u8; size];
+
+            f.seek(SeekFrom::Start(this_offset as u64))?;
+            f.read_exact(&mut buf)?;
+
+            sections[this_section] = buf;
+        }
+
+        // for the last section, just read to EOF
+        if let Some(&section) = section_order.last() {
+            let offset = header.offset(section);
+            let mut buf = Vec::new();
+
+            f.seek(SeekFrom::Start(offset as u64))?;
+            f.read_to_end(&mut buf)?;
+
+            sections[section] = buf;
+        }
 
         Ok(Self {
             header,
@@ -352,6 +354,18 @@ impl RawRdt {
 
     pub fn write<T: Write + Seek>(&self, mut f: T) -> Result<()> {
         f.write_le(&self.header)?;
+
+        // account for the possibility of a gap between the header and the first section
+        if let Some(&section) = self.section_order.first() {
+            let offset = self.header.offset(section) as u64;
+            let current_position = f.stream_position()?;
+            if offset > current_position {
+                f.seek(SeekFrom::Start(offset))?;
+            } else if offset < current_position {
+                bail!("First section offset is inside the header (section {:?}, offset {})", section, offset);
+            }
+        }
+
         for &section in &self.section_order {
             let current_position = f.stream_position()? as u32;
             let expected_offset = self.header.offset(section);
