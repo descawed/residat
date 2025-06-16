@@ -246,11 +246,6 @@ impl RawRdt {
     }
 
     pub fn replace_section(&mut self, section: RdtSection, mut data: Vec<u8>) {
-        // make sure sections are 32-bit aligned
-        if data.len() & 3 != 0 {
-            data.resize(data.len() + 4 - (data.len() & 3), 0);
-        }
-
         if data.is_empty() {
             let original_offset = self.header.offset(section);
             let original_size = self.sections[section].len();
