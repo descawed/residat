@@ -246,7 +246,7 @@ impl RawRdt {
     }
 
     pub fn replace_section(&mut self, section: RdtSection, mut data: Vec<u8>) {
-        // sections must be 32-bit aligned
+        // make sure sections are 32-bit aligned
         if data.len() & 3 != 0 {
             data.resize(data.len() + 4 - (data.len() & 3), 0);
         }
