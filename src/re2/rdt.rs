@@ -186,35 +186,6 @@ impl RdtHeader {
             RdtSection::Animation => self.animation_offset = offset,
         }
     }
-
-    fn size(&self, in_section: RdtSection) -> Option<u32> {
-        let offset = self.offset(in_section);
-        if offset == 0 {
-            return Some(0);
-        }
-
-        let mut size = u32::MAX;
-        for &section in &RdtSection::ALL {
-            if section == in_section {
-                continue;
-            }
-
-            let next_offset = self.offset(section);
-            if next_offset > offset {
-                size = size.min(next_offset - offset);
-            }
-        }
-
-        (size != u32::MAX).then_some(size)
-    }
-
-    fn init_script_size(&self) -> usize {
-        self.size(RdtSection::InitScript).unwrap_or(0) as usize
-    }
-
-    fn exec_script_size(&self) -> usize {
-        self.size(RdtSection::ExecScript).unwrap_or(0) as usize
-    }
 }
 
 #[derive(Debug, Clone)]
