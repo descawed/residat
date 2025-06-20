@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use binrw::{binrw, BinReaderExt, BinWriterExt};
 use enum_map::{Enum, EnumMap, enum_map};
 
@@ -229,9 +229,38 @@ impl RawRdt {
         &self.sections[section]
     }
 
-    fn shift(&mut self, offset: u32, delta: i32) {
+    pub fn model_offsets(&self) -> Result<Vec<ModelOffsets>> {
+        let raw = self.section(RdtSection::Model);
+        let mut reader = Cursor::new(raw);
+        let mut offsets = Vec::with_capacity(self.header.o_model as usize);
+        for _ in 0..self.header.o_model {
+            offsets.push(reader.read_le()?);
+        }
+        Ok(offsets)
+    }
+
+    pub fn set_model_offsets(&mut self, offsets: Vec<ModelOffsets>) -> Result<()> {
+        if offsets.len() > u8::MAX as usize {
+            bail!("Too many model offsets");
+        }
+
+        let mut writer = Cursor::new(Vec::new());
+        writer.write_le(&offsets)?;
+        let mut buf = writer.into_inner();
+        // if there was any extra data in the buffer, leave it there
+        let old_data = &self.sections[RdtSection::Model];
+        if old_data.len() > buf.len() {
+            buf.extend_from_slice(&old_data[buf.len()..]);
+        }
+
+        self.replace_section(RdtSection::Model, buf)?;
+        self.header.o_model = offsets.len() as u8;
+        Ok(())
+    }
+
+    fn shift(&mut self, offset: u32, delta: i32) -> Result<()> {
         if delta == 0 {
-            return;
+            return Ok(());
         }
 
         for &section in &RdtSection::ALL {
@@ -243,16 +272,29 @@ impl RawRdt {
             let new_offset = section_offset.checked_add_signed(delta).unwrap_or(0);
             self.header.set_offset(section, new_offset);
         }
+
+        // need to update model pointers
+        let mut model_offsets = self.model_offsets()?;
+        for model_offset in &mut model_offsets {
+            if model_offset.tim_offset >= offset {
+                model_offset.tim_offset = model_offset.tim_offset.checked_add_signed(delta).ok_or_else(|| anyhow!("Overflow while updating model offsets"))?;
+            }
+
+            if model_offset.md1_offset >= offset {
+                model_offset.md1_offset = model_offset.md1_offset.checked_add_signed(delta).ok_or_else(|| anyhow!("Overflow while updating model offsets"))?;
+            }
+        }
+        self.set_model_offsets(model_offsets)
     }
 
-    pub fn replace_section(&mut self, section: RdtSection, mut data: Vec<u8>) {
+    pub fn replace_section(&mut self, section: RdtSection, data: Vec<u8>) -> Result<()> {
         if data.is_empty() {
             let original_offset = self.header.offset(section);
             let original_size = self.sections[section].len();
             self.header.set_offset(section, 0);
             self.section_order.retain(|s| *s != section);
             // need to shift things forward
-            self.shift(original_offset, -(original_size as i32));
+            self.shift(original_offset, -(original_size as i32))?;
         } else if !self.section_order.contains(&section) {
             // add it at the end
             self.section_order.push(section);
@@ -263,10 +305,12 @@ impl RawRdt {
             // need to shift everything that comes after this section
             let offset = self.header.offset(section);
             let original_size = self.sections[section].len();
-            self.shift(offset, data.len() as i32 - original_size as i32);
+            self.shift(offset, data.len() as i32 - original_size as i32)?;
         }
 
         self.sections[section] = data;
+
+        Ok(())
     }
 
     pub fn size(&self) -> usize {
@@ -379,6 +423,13 @@ impl RawRdt {
 
         Ok(())
     }
+}
+
+#[binrw]
+#[derive(Debug)]
+pub struct ModelOffsets {
+    pub tim_offset: u32,
+    pub md1_offset: u32,
 }
 
 #[binrw]
