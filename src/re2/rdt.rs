@@ -229,6 +229,10 @@ impl RawRdt {
         &self.sections[section]
     }
 
+    pub fn reader(&self, section: RdtSection) -> Option<Cursor<&[u8]>> {
+        (self.header.offset(section) != 0).then(|| Cursor::new(self.section(section)))
+    }
+
     pub fn model_offsets(&self) -> Result<Vec<ModelOffsets>> {
         let raw = self.section(RdtSection::Model);
         let mut reader = Cursor::new(raw);
@@ -315,6 +319,10 @@ impl RawRdt {
 
     pub fn size(&self) -> usize {
         size_of::<RdtHeader>() + self.sections.values().map(Vec::len).sum::<usize>()
+    }
+
+    pub fn section_size(&self, section: RdtSection) -> usize {
+        self.sections[section].len()
     }
 
     pub fn read<T: Read + Seek>(mut f: T) -> Result<Self> {
@@ -501,6 +509,7 @@ struct FloorData {
 /// supported.
 #[derive(Debug)]
 pub struct Rdt {
+    raw: RawRdt,
     collision: Collision,
     floors: Vec<Floor>,
     init_script: Vec<Instruction>,
@@ -540,55 +549,40 @@ impl Rdt {
         script
     }
 
-    pub fn read<T: Read + Seek>(mut f: T) -> Result<Self> {
-        let file_size = f.seek(SeekFrom::End(0))?;
-        f.seek(SeekFrom::Start(0))?;
+    pub fn read<T: Read + Seek>(f: T) -> Result<Self> {
+        let raw = RawRdt::read(f)?;
 
-        let header: RdtHeader = f.read_le().context("RDT header")?;
-
-        let collision = if header.collision_offset == 0 {
+        let collision = if let Some(mut collision_reader) = raw.reader(RdtSection::Collision) {
+            collision_reader.read_le().context("RDT collision")?
+        } else {
             Collision::default()
-        } else {
-            f.seek(SeekFrom::Start(header.collision_offset as u64))?;
-            f.read_le().context("RDT collision")?
         };
 
-        let floors = if header.floor_offset == 0 {
-            Vec::new()
-        } else {
-            f.seek(SeekFrom::Start(header.floor_offset as u64))?;
-
-            let floor_data: FloorData = f.read_le().context("RDT floor data")?;
+        let floors = if let Some(mut floor_reader) = raw.reader(RdtSection::Floor) {
+            let floor_data: FloorData = floor_reader.read_le().context("RDT floor data")?;
             floor_data.floors
+        } else {
+            Vec::new()
         };
 
-        let init_script = if header.init_script_offset == 0 {
-            Vec::new()
-        } else {
-            f.seek(SeekFrom::Start(header.init_script_offset as u64))?;
-            let script_size = header.init_script_size();
+        let init_script = if let Some(mut init_script_reader) = raw.reader(RdtSection::InitScript) {
+            let script_size = raw.section_size(RdtSection::InitScript);
             let mut buf = vec![0u8; script_size];
-            f.read_exact(&mut buf)?;
+            init_script_reader.read_exact(&mut buf)?;
 
             Self::read_script(script_size as u64, &mut Cursor::new(buf))
+        } else {
+            Vec::new()
         };
 
-        let exec_script = if header.exec_script_offset == 0 {
-            Vec::new()
-        } else {
-            let exec_script_offset = header.exec_script_offset as u64;
-            f.seek(SeekFrom::Start(exec_script_offset))?;
-
-            let mut script_size = header.exec_script_size();
-            if exec_script_offset + script_size as u64 > file_size {
-                script_size = (file_size - exec_script_offset) as usize;
-            }
+        let exec_script = if let Some(mut exec_script_reader) = raw.reader(RdtSection::ExecScript) {
+            let script_size = raw.section_size(RdtSection::ExecScript);
 
             if script_size == 0 {
                 Vec::new()
             } else {
                 let mut buf = vec![0u8; script_size];
-                f.read_exact(&mut buf)?;
+                exec_script_reader.read_exact(&mut buf)?;
 
                 let mut reader = Cursor::new(buf);
 
@@ -615,9 +609,12 @@ impl Rdt {
 
                 script
             }
+        } else {
+            Vec::new()
         };
 
         Ok(Self {
+            raw,
             collision,
             floors,
             init_script,
@@ -643,6 +640,10 @@ impl Rdt {
 
     pub fn exec_script(&self) -> impl Iterator<Item = &[Instruction]> {
         self.exec_script.iter().map(|x| x.as_slice())
+    }
+
+    pub fn raw(&self, section: RdtSection) -> &[u8] {
+        self.raw.section(section)
     }
 
     pub fn print_scripts(&self) {
