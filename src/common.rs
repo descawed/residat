@@ -65,6 +65,17 @@ pub struct SVECTOR {
     pub pad: Fixed16,
 }
 
+impl SVECTOR {
+    pub const fn zero() -> Self {
+        Self {
+            vx: Fixed16(0),
+            vy: Fixed16(0),
+            vz: Fixed16(0),
+            pad: Fixed16(0),
+        }
+    }
+}
+
 /// A 3D vector with 16-bit components and no padding
 #[repr(C)]
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -82,6 +93,16 @@ pub struct VECTOR {
     pub x: Fixed32,
     pub y: Fixed32,
     pub z: Fixed32,
+}
+
+impl VECTOR {
+    pub const fn zero() -> Self {
+        Self {
+            x: Fixed32(0),
+            y: Fixed32(0),
+            z: Fixed32(0),
+        }
+    }
 }
 
 /// A color vector
@@ -103,6 +124,20 @@ pub struct MATRIX {
     pub m: [Fixed16; 9],
     pub pad: u16,
     pub t: VECTOR,
+}
+
+impl MATRIX {
+    pub const fn zero() -> Self {
+        Self {
+            m: [
+                Fixed16(0), Fixed16(0), Fixed16(0),
+                Fixed16(0), Fixed16(0), Fixed16(0),
+                Fixed16(0), Fixed16(0), Fixed16(0),
+            ],
+            pad: 0,
+            t: VECTOR::zero(),
+        }
+    }
 }
 
 #[cfg(test)]
