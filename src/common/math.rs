@@ -564,6 +564,38 @@ impl std::ops::BitAnd<Fixed32> for Fixed32 {
     }
 }
 
+impl std::ops::BitOr<i32> for Fixed32 {
+    type Output = i32;
+
+    fn bitor(self, rhs: i32) -> Self::Output {
+        self.0 | rhs
+    }
+}
+
+impl std::ops::BitOr<Fixed32> for Fixed32 {
+    type Output = Fixed32;
+
+    fn bitor(self, rhs: Fixed32) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor<i32> for Fixed32 {
+    type Output = i32;
+
+    fn bitxor(self, rhs: i32) -> Self::Output {
+        self.0 ^ rhs
+    }
+}
+
+impl std::ops::BitXor<Fixed32> for Fixed32 {
+    type Output = Fixed32;
+
+    fn bitxor(self, rhs: Fixed32) -> Self::Output {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
 impl std::fmt::Display for Fixed32 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
