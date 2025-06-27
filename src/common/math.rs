@@ -540,6 +540,22 @@ impl std::ops::Shr<i32> for Fixed32 {
     }
 }
 
+impl std::ops::BitAnd<i32> for Fixed32 {
+    type Output = i32;
+
+    fn bitand(self, rhs: i32) -> Self::Output {
+        self.0 & rhs
+    }
+}
+
+impl std::ops::BitAnd<Fixed32> for Fixed32 {
+    type Output = Fixed32;
+
+    fn bitand(self, rhs: Fixed32) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
 impl std::fmt::Display for Fixed32 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
