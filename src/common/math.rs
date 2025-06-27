@@ -691,6 +691,28 @@ impl std::ops::Neg for Vec2 {
     }
 }
 
+impl std::ops::Shl<i32> for Vec2 {
+    type Output = Self;
+
+    fn shl(self, rhs: i32) -> Self::Output {
+        Self {
+            x: self.x << rhs,
+            z: self.z << rhs,
+        }
+    }
+}
+
+impl std::ops::Shr<i32> for Vec2 {
+    type Output = Self;
+
+    fn shr(self, rhs: i32) -> Self::Output {
+        Self {
+            x: self.x >> rhs,
+            z: self.z >> rhs,
+        }
+    }
+}
+
 impl From<(Fixed32, Fixed32)> for Vec2 {
     fn from(v: (Fixed32, Fixed32)) -> Self {
         Self {
