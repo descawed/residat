@@ -379,6 +379,14 @@ impl Fixed32 {
         Self(self.0.abs())
     }
 
+    pub const fn inc(&self) -> Self {
+        Self(self.0 + 1)
+    }
+
+    pub const fn dec(&self) -> Self {
+        Self(self.0 - 1)
+    }
+
     pub const fn sqrt(&self) -> Self {
         Self(sqrt(self.0 << 12) as i32)
     }
