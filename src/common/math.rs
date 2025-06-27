@@ -363,6 +363,10 @@ impl Fixed32 {
         self.0 as f32 / 4096.0
     }
 
+    pub const fn to_f64(&self) -> f64 {
+        self.0 as f64 / 4096.0
+    }
+
     pub const fn to_radians(&self) -> f32 {
         self.to_f32() * TAU
     }
@@ -404,9 +408,18 @@ impl Fixed32 {
         // note: this is NOT perfectly accurate to the game because the game uses the x87 fpatan
         // instruction, which is not available on x64. however, the difference should be
         // extremely small, and emulating the fpatan instruction would be a lot of work.
-        let atan = (self.0 as f64 / 4096.0).atan();
+        let atan = self.to_f64().atan();
         // the game multiplies by the reciprocal of 3.14, so we'll use that value rather than
         // the PI constant
+        let angle = (atan * 2048.0) / 3.14;
+        Self(angle as i32)
+    }
+
+    pub fn atan2(&self, other: Self) -> Self {
+        // same caveats as above apply
+        let y = self.0 as f64;
+        let x = other.0 as f64;
+        let atan = y.atan2(x);
         let angle = (atan * 2048.0) / 3.14;
         Self(angle as i32)
     }
