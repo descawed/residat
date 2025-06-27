@@ -418,13 +418,14 @@ pub struct Collider {
     pub z: Fixed16,
     pub w: UFixed16,
     pub h: UFixed16,
-    pub packed: u32,
+    pub collision_mask: u16,
+    pub quadrant_mask: u16,
     pub floor: u32,
 }
 
 impl Collider {
     pub const fn collision_mask(&self) -> u16 {
-        (self.packed & 0xfff0) as u16
+        self.collision_mask
     }
 }
 
@@ -629,5 +630,15 @@ impl Rdt {
                 println!("\t{:?}", instruction);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_size() {
+        assert_eq!(size_of::<Collider>(), 0x10);
     }
 }
