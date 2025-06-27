@@ -425,7 +425,7 @@ pub struct Collider {
 
 impl Collider {
     pub const fn collision_mask(&self) -> u16 {
-        self.collision_mask
+        self.collision_mask & 0xfff0
     }
 }
 
