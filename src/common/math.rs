@@ -1087,6 +1087,16 @@ impl From<&SVECTOR> for Vec3 {
     }
 }
 
+impl From<Vec2> for Vec3 {
+    fn from(v: Vec2) -> Self {
+        Self {
+            x: v.x,
+            y: Fixed32(0),
+            z: v.z,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
