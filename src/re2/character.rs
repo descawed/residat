@@ -345,7 +345,7 @@ impl Character {
     }
 
     pub fn parts(&self) -> &[CharacterPart] {
-        &self.parts[..self.num_parts.min(1) as usize]
+        &self.parts[..self.num_parts.max(1) as usize]
     }
 }
 
