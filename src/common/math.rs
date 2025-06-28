@@ -389,6 +389,14 @@ impl Fixed32 {
         Self(self.0 - 1)
     }
 
+    /// Multiply self by `mul` and then divide by `div`
+    ///
+    /// This avoids rescaling after each operation because the scaling of the multiplication and
+    /// division naturally cancel out.
+    pub const fn mul_div(&self, mul: Self, div: Self) -> Self {
+        Self(self.0 * mul.0 / div.0)
+    }
+
     pub const fn sqrt(&self) -> Self {
         Self(sqrt(self.0 << 12) as i32)
     }
@@ -444,6 +452,10 @@ impl Fixed32 {
 
     pub const fn is_negative(&self) -> bool {
         self.0 < 0
+    }
+
+    pub const fn bits(&self) -> u32 {
+        self.0 as u32
     }
 }
 
