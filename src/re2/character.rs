@@ -278,9 +278,9 @@ pub struct CharacterPart {
     pub pos: VECTOR,           // 00
     pub x_size: UFixed16,      // 0C
     pub z_size: UFixed16,      // 0E
-    pub unk_x: Fixed16,        // 10
-    pub unk_z: Fixed16,        // 12
-    pub unk_y: Fixed16,        // 14
+    pub local_x: Fixed16,      // 10
+    pub local_z: Fixed16,      // 12
+    pub local_y: Fixed16,      // 14
     pub size_offset: UFixed16, // 16
     pub unk_18: u16,           // 18
     pub y_size: UFixed16,      // 1A
@@ -312,8 +312,8 @@ pub struct Character {
     pub type_: u16,                    // 10E
     pub collision_state: u32,          // 110
     pub colliders_hit: u32,            // 114
-    pub next_x: Fixed16,               // 118
-    pub next_z: Fixed16,               // 11A
+    pub prev_x: Fixed16,               // 118
+    pub prev_z: Fixed16,               // 11A
     pub unk_11c: [u8; 0x28],           // 11C
     pub velocity: SVECTOR,             // 144
     pub unk_14c: [u8; 0xa],            // 14C

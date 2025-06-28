@@ -3,6 +3,8 @@ use std::f32::consts::{PI, TAU};
 use binrw::binrw;
 use derive_more::{Add, AddAssign, From, Into, Neg, Sub, SubAssign};
 
+use crate::common::{SVECTOR, VECTOR};
+
 mod tables;
 use tables::*;
 
@@ -1000,6 +1002,46 @@ impl From<(UFixed16, UFixed16, UFixed16)> for Vec3 {
             x: v.0.to_32(),
             y: v.1.to_32(),
             z: v.2.to_32(),
+        }
+    }
+}
+
+impl From<VECTOR> for Vec3 {
+    fn from(v: VECTOR) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
+}
+
+impl From<&VECTOR> for Vec3 {
+    fn from(v: &VECTOR) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
+}
+
+impl From<SVECTOR> for Vec3 {
+    fn from(v: SVECTOR) -> Self {
+        Self {
+            x: v.vx.to_32(),
+            y: v.vy.to_32(),
+            z: v.vz.to_32(),
+        }
+    }
+}
+
+impl From<&SVECTOR> for Vec3 {
+    fn from(v: &SVECTOR) -> Self {
+        Self {
+            x: v.vx.to_32(),
+            y: v.vy.to_32(),
+            z: v.vz.to_32(),
         }
     }
 }
