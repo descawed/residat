@@ -238,6 +238,14 @@ impl CharacterId {
     pub const fn is_licker(&self) -> bool {
         matches!(self, Self::LickerRed | Self::LickerBlack)
     }
+
+    pub const fn base_id(&self) -> Self {
+        match self {
+            Self::Unknown2 | Self::LeonBandaged | Self::Unknown6 | Self::LeonTankTop | Self::LeonSkullJacket => Self::Leon,
+            Self::Unknown3 | Self::ClaireBlackTop | Self::Unknown7 | Self::ClaireBiker => Self::Claire,
+            _ => *self,
+        }
+    }
 }
 
 /// 3D and other information for a part of a 3D model in the game world
