@@ -341,6 +341,10 @@ impl Character {
             unsafe { std::slice::from_raw_parts(parts_ptr, self.num_model_parts as usize) }
         }
     }
+
+    pub fn parts(&self) -> &[CharacterPart] {
+        &self.parts[..self.num_parts as usize]
+    }
 }
 
 #[cfg(test)]
