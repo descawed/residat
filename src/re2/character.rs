@@ -8,6 +8,8 @@ pub const NUM_CHARACTERS: usize = 34;
 pub const NUM_OBJECTS: usize = 32;
 /// The size of the Character structure representing an object-type "character"
 pub const OBJECT_CHARACTER_SIZE: usize = 0x1F8;
+/// The maximum number of parts that a Character can be composed of.
+pub const MAX_PARTS: usize = 4;
 
 /// The ID of a particular character type
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Hash, IntoPrimitive, TryFromPrimitive)]
@@ -292,44 +294,44 @@ pub struct CharacterPart {
 #[repr(C)]
 #[derive(Debug)]
 pub struct Character {
-    pub flags: u32,                    // 000
-    pub state: [u8; 4],                // 004
-    pub id: u8,                        // 005
-    pub unk_09: [u8; 0x3],             // 009
-    pub index: u8,                     // 00C
-    pub unk_0d: [u8; 0x17],            // 00D
-    pub transform: MATRIX,             // 024
-    pub pos_short: SVECTOR,            // 044
-    pub base_pos_short: SVECTOR,       // 04C
-    pub unk_54: [u8; 0x22],            // 054
-    pub motion_angle: Fixed16,         // 076
-    pub unk_78: [u8; 0xc],             // 078
-    pub parts: [CharacterPart; 4],     // 084
-    pub unk_104: u16,                  // 104
-    pub floor: u8,                     // 106
-    pub num_model_parts: u8,           // 107
-    pub unk_108: [u8; 6],              // 108
-    pub type_: u16,                    // 10E
-    pub collision_state: u32,          // 110
-    pub colliders_hit: u32,            // 114
-    pub prev_x: Fixed16,               // 118
-    pub prev_z: Fixed16,               // 11A
-    pub unk_11c: [u8; 0x28],           // 11C
-    pub velocity: SVECTOR,             // 144
-    pub unk_14c: [u8; 0xa],            // 14C
-    pub health: i16,                   // 156
-    pub motion: i16,                   // 158
-    pub unk_15a: [u8; 0x3e],           // 15A
-    pub model_parts: Ptr32<ModelPart>, // 198
-    pub unk_19c: [u8; 0x4C],           // 19C
-    pub num_parts: u32,                // 1E8
-    pub weapon_hit_stage_frames: u8,   // 1EC
-    pub weapon_hit_stage_index: u8,    // 1ED
-    pub unk_1ee: [u8; 0x2],            // 1EE
-    pub distance_to_target: u32,       // 1F0
-    pub unk_1f4: u32,                  // 1F4
-    pub unk_1f8: u32,                  // 1F8
-    pub prev_state: [u8; 4],           // 1FC
+    pub flags: u32,                        // 000
+    pub state: [u8; 4],                    // 004
+    pub id: u8,                            // 005
+    pub unk_09: [u8; 0x3],                 // 009
+    pub index: u8,                         // 00C
+    pub unk_0d: [u8; 0x17],                // 00D
+    pub transform: MATRIX,                 // 024
+    pub pos_short: SVECTOR,                // 044
+    pub base_pos_short: SVECTOR,           // 04C
+    pub unk_54: [u8; 0x22],                // 054
+    pub motion_angle: Fixed16,             // 076
+    pub unk_78: [u8; 0xc],                 // 078
+    pub parts: [CharacterPart; MAX_PARTS], // 084
+    pub unk_104: u16,                      // 104
+    pub floor: u8,                         // 106
+    pub num_model_parts: u8,               // 107
+    pub unk_108: [u8; 6],                  // 108
+    pub type_: u16,                        // 10E
+    pub collision_state: u32,              // 110
+    pub colliders_hit: u32,                // 114
+    pub prev_x: Fixed16,                   // 118
+    pub prev_z: Fixed16,                   // 11A
+    pub unk_11c: [u8; 0x28],               // 11C
+    pub velocity: SVECTOR,                 // 144
+    pub unk_14c: [u8; 0xa],                // 14C
+    pub health: i16,                       // 156
+    pub motion: i16,                       // 158
+    pub unk_15a: [u8; 0x3e],               // 15A
+    pub model_parts: Ptr32<ModelPart>,     // 198
+    pub unk_19c: [u8; 0x4C],               // 19C
+    pub num_parts: u32,                    // 1E8
+    pub weapon_hit_stage_frames: u8,       // 1EC
+    pub weapon_hit_stage_index: u8,        // 1ED
+    pub unk_1ee: [u8; 0x2],                // 1EE
+    pub distance_to_target: u32,           // 1F0
+    pub unk_1f4: u32,                      // 1F4
+    pub unk_1f8: u32,                      // 1F8
+    pub prev_state: [u8; 4],               // 1FC
 }
 
 impl Character {
