@@ -809,6 +809,201 @@ impl From<(UFixed16, UFixed16)> for Vec2 {
     }
 }
 
+/// A 3D vector of fixed-point decimal numbers
+/// 
+/// Can also represent a point. The three components are the x, y, and z coordinates.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct Vec3 {
+    pub x: Fixed32,
+    pub y: Fixed32,
+    pub z: Fixed32,
+}
+
+impl Vec3 {
+    pub fn new<T, U, V>(x: T, y: U, z: V) -> Self
+    where T: Into<Fixed32>,
+          U: Into<Fixed32>,
+          V: Into<Fixed32>
+    {
+        Self {
+            x: x.into(),
+            y: y.into(),
+            z: z.into(),
+        }
+    }
+
+    pub const fn zero() -> Self {
+        Self {
+            x: Fixed32(0),
+            y: Fixed32(0),
+            z: Fixed32(0),
+        }
+    }
+
+    pub const fn len(&self) -> Fixed32 {
+        let x = self.x.0;
+        let y = self.y.0;
+        let z = self.z.0;
+
+        let (x_squared, x_overflow) = x.overflowing_mul(x);
+        let (y_squared, y_overflow) = y.overflowing_mul(y);
+        let (z_squared, z_overflow) = z.overflowing_mul(z);
+
+        let (xy_sum, xy_overflow) = x_squared.overflowing_add(y_squared);
+        let (sum, sum_overflow) = xy_sum.overflowing_add(z_squared);
+
+        if x_overflow || y_overflow || z_overflow || xy_overflow || sum_overflow {
+            return Fixed32(i32::MAX);
+        }
+
+        Fixed32(sqrt(sum) as i32)
+    }
+
+    pub fn saturating_sub(&self, rhs: impl Into<Self>) -> Self {
+        let rhs = rhs.into();
+        Self {
+            x: Fixed32(self.x.0.saturating_sub(rhs.x.0)),
+            y: Fixed32(self.y.0.saturating_sub(rhs.y.0)),
+            z: Fixed32(self.z.0.saturating_sub(rhs.z.0)),
+        }
+    }
+
+    pub const fn is_zero(&self) -> bool {
+        self.x.is_zero() && self.y.is_zero() && self.z.is_zero()
+    }
+
+    pub const fn xz(&self) -> Vec2 {
+        Vec2 { x: self.x, z: self.z }
+    }
+}
+
+impl std::ops::Add for Vec3 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl std::ops::Add<(Fixed32, Fixed32, Fixed32)> for Vec3 {
+    type Output = Self;
+
+    fn add(self, rhs: (Fixed32, Fixed32, Fixed32)) -> Self::Output {
+        Self {
+            x: self.x + rhs.0,
+            y: self.y + rhs.1,
+            z: self.z + rhs.2,
+        }
+    }
+}
+
+impl std::ops::Sub for Vec3 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl std::ops::Sub<(Fixed32, Fixed32, Fixed32)> for Vec3 {
+    type Output = Self;
+
+    fn sub(self, rhs: (Fixed32, Fixed32, Fixed32)) -> Self::Output {
+        Self {
+            x: self.x - rhs.0,
+            y: self.y - rhs.1,
+            z: self.z - rhs.2,
+        }
+    }
+}
+
+impl<T: Into<Fixed32>> std::ops::Mul<T> for Vec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
+    }
+}
+
+impl std::ops::Neg for Vec3 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
+    }
+}
+
+impl std::ops::Shl<i32> for Vec3 {
+    type Output = Self;
+
+    fn shl(self, rhs: i32) -> Self::Output {
+        Self {
+            x: self.x << rhs,
+            y: self.y << rhs,
+            z: self.z << rhs,
+        }
+    }
+}
+
+impl std::ops::Shr<i32> for Vec3 {
+    type Output = Self;
+
+    fn shr(self, rhs: i32) -> Self::Output {
+        Self {
+            x: self.x >> rhs,
+            y: self.y >> rhs,
+            z: self.z >> rhs,
+        }
+    }
+}
+
+impl From<(Fixed32, Fixed32, Fixed32)> for Vec3 {
+    fn from(v: (Fixed32, Fixed32, Fixed32)) -> Self {
+        Self {
+            x: v.0,
+            y: v.1,
+            z: v.2,
+        }
+    }
+}
+
+impl From<(Fixed16, Fixed16, Fixed16)> for Vec3 {
+    fn from(v: (Fixed16, Fixed16, Fixed16)) -> Self {
+        Self {
+            x: v.0.to_32(),
+            y: v.1.to_32(),
+            z: v.2.to_32(),
+        }
+    }
+}
+
+impl From<(UFixed16, UFixed16, UFixed16)> for Vec3 {
+    fn from(v: (UFixed16, UFixed16, UFixed16)) -> Self {
+        Self {
+            x: v.0.to_32(),
+            y: v.1.to_32(),
+            z: v.2.to_32(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
