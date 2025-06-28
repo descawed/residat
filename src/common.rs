@@ -78,6 +78,7 @@ impl SVECTOR {
 
 /// A 3D vector with 16-bit components and no padding
 #[repr(C)]
+#[binrw]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SSVECTOR {
     pub vx: Fixed16,

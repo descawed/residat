@@ -1,3 +1,6 @@
+mod animation;
+pub use animation::*;
+
 mod aot;
 pub use aot::*;
 

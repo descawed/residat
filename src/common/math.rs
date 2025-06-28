@@ -3,7 +3,7 @@ use std::f32::consts::{PI, TAU};
 use binrw::binrw;
 use derive_more::{Add, AddAssign, From, Into, Neg, Sub, SubAssign};
 
-use crate::common::{SVECTOR, VECTOR};
+use crate::common::{SSVECTOR, SVECTOR, VECTOR};
 
 mod tables;
 use tables::*;
@@ -620,6 +620,7 @@ impl std::fmt::Display for Fixed32 {
 /// 
 /// Can also represent a point. The two components are typically the x and z coordinates, with the
 /// y (vertical) coordinate being omitted for 2D calculations.
+#[binrw]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Vec2 {
     pub x: Fixed32,
@@ -826,6 +827,7 @@ impl From<(UFixed16, UFixed16)> for Vec2 {
 /// A 3D vector of fixed-point decimal numbers
 /// 
 /// Can also represent a point. The three components are the x, y, and z coordinates.
+#[binrw]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Vec3 {
     pub x: Fixed32,
@@ -1079,6 +1081,26 @@ impl From<SVECTOR> for Vec3 {
 
 impl From<&SVECTOR> for Vec3 {
     fn from(v: &SVECTOR) -> Self {
+        Self {
+            x: v.vx.to_32(),
+            y: v.vy.to_32(),
+            z: v.vz.to_32(),
+        }
+    }
+}
+
+impl From<SSVECTOR> for Vec3 {
+    fn from(v: SSVECTOR) -> Self {
+        Self {
+            x: v.vx.to_32(),
+            y: v.vy.to_32(),
+            z: v.vz.to_32(),
+        }
+    }
+}
+
+impl From<&SSVECTOR> for Vec3 {
+    fn from(v: &SSVECTOR) -> Self {
         Self {
             x: v.vx.to_32(),
             y: v.vy.to_32(),
