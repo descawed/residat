@@ -301,9 +301,9 @@ pub struct Character {
     pub index: u8,                         // 00C
     pub unk_0d: [u8; 0x17],                // 00D
     pub transform: MATRIX,                 // 024
-    pub pos_short: SVECTOR,                // 044
-    pub base_pos_short: SVECTOR,           // 04C
-    pub unk_54: [u8; 0x22],                // 054
+    pub prev_transform_pos: SSVECTOR,      // 044
+    pub prev_root_part_pos: SSVECTOR,      // 04A
+    pub unk_50: [u8; 0x26],                // 050
     pub motion_angle: Fixed16,             // 076
     pub unk_78: [u8; 0xc],                 // 078
     pub parts: [CharacterPart; MAX_PARTS], // 084
