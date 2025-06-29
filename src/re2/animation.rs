@@ -82,6 +82,10 @@ impl AnimationSet {
         Self::new(animations, 0xffffffff)
     }
 
+    pub const fn empty() -> Self {
+        Self::from_model(Vec::new())
+    }
+
     pub const fn animations(&self) -> &[Vec<AnimationFrame>] {
         self.animations.as_slice()
     }
