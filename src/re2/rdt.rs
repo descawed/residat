@@ -5,6 +5,7 @@ use binrw::{binrw, BinReaderExt, BinWriterExt};
 use enum_map::{Enum, EnumMap, enum_map};
 
 use crate::common::*;
+use super::animation::AnimationSet;
 use super::script::Instruction;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
@@ -486,6 +487,7 @@ pub struct Rdt {
     floors: Vec<Floor>,
     init_script: Vec<Instruction>,
     exec_script: Vec<Vec<Instruction>>,
+    animation_sets: Vec<AnimationSet>,
 }
 
 impl Rdt {
@@ -585,12 +587,19 @@ impl Rdt {
             Vec::new()
         };
 
+        let animation_sets = if let Some(animation_reader) = raw.reader(RdtSection::Animation) {
+            AnimationSet::read_rdt(animation_reader).context("RDT animation")?
+        } else {
+            Vec::new()
+        };
+
         Ok(Self {
             raw,
             collision,
             floors,
             init_script,
             exec_script,
+            animation_sets,
         })
     }
 
@@ -612,6 +621,10 @@ impl Rdt {
 
     pub fn exec_script(&self) -> impl Iterator<Item = &[Instruction]> {
         self.exec_script.iter().map(|x| x.as_slice())
+    }
+
+    pub fn animation_sets(&self) -> &[AnimationSet] {
+        &self.animation_sets
     }
 
     pub fn raw(&self, section: RdtSection) -> &[u8] {
