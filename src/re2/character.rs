@@ -354,7 +354,14 @@ impl Character {
     }
 
     pub fn parts(&self) -> &[CharacterPart] {
-        &self.parts[..self.num_parts.max(1) as usize]
+        let mut num_parts = self.num_parts.max(1) as usize;
+        if num_parts > MAX_PARTS {
+            // if the part number is greater than the max, we shouldn't trust it; we'll just default
+            // to the safest value of 1
+            num_parts = 1;
+        }
+
+        &self.parts[..num_parts]
     }
 }
 
