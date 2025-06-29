@@ -318,7 +318,8 @@ pub struct Character {
     pub unk_104: u16,                      // 104
     pub floor: u8,                         // 106
     pub num_model_parts: u8,               // 107
-    pub unk_108: [u8; 6],                  // 108
+    pub unk_108: [u8; 4],                  // 108
+    pub water_level: Fixed16,              // 10C
     pub type_: u16,                        // 10E
     pub collision_state: u32,              // 110
     pub colliders_hit: u32,                // 114
