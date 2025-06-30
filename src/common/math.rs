@@ -719,6 +719,13 @@ impl std::ops::Add for Vec2 {
     }
 }
 
+impl std::ops::AddAssign for Vec2 {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.z += rhs.z;
+    }
+}
+
 impl std::ops::Add<(Fixed32, Fixed32)> for Vec2 {
     type Output = Self;
 
@@ -738,6 +745,13 @@ impl std::ops::Sub for Vec2 {
             x: self.x - rhs.x,
             z: self.z - rhs.z,
         }
+    }
+}
+
+impl std::ops::SubAssign for Vec2 {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.z -= rhs.z;
     }
 }
 
@@ -934,6 +948,14 @@ impl std::ops::Add for Vec3 {
     }
 }
 
+impl std::ops::AddAssign for Vec3 {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+    }
+}
+
 impl std::ops::Add<(Fixed32, Fixed32, Fixed32)> for Vec3 {
     type Output = Self;
 
@@ -955,6 +977,14 @@ impl std::ops::Sub for Vec3 {
             y: self.y - rhs.y,
             z: self.z - rhs.z,
         }
+    }
+}
+
+impl std::ops::SubAssign for Vec3 {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
     }
 }
 
